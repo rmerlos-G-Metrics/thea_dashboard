@@ -22,10 +22,28 @@ def load_patient_master_list():
     return df
 
 def get_patient_data(patient_id):
-    """Fetches measurement and OCT data for a specific patient."""
+    """Fetches measurement and OCT data, searching clinic tables until the patient is found."""
     conn = sqlite3.connect(DB_PATH)
-    df_eye = pd.read_sql("SELECT time_of_measurement, eye_pressure FROM eyemate_measurements WHERE patient_id = ?", conn, params=(patient_id,))
-    df_oct = pd.read_sql("SELECT * FROM sulzbach_processed WHERE patient_id = ?", conn, params=(patient_id,))
+    
+    # 1. Fetch Eye Pressure Data
+    df_eye = pd.read_sql(
+        "SELECT time_of_measurement, eye_pressure FROM eyemate_measurements WHERE patient_id = ?", 
+        conn, params=(patient_id,)
+    )
+    
+    # 2. Smart Search for OCT Data
+    df_oct = pd.DataFrame() # Start with an empty dataframe
+    clinics = ['sulzbach_processed', 'bochum', 'mainz']
+    
+    for clinic_table in clinics:
+        # We use an f-string for the table name, which is safe here because we hardcoded the list
+        query = f"SELECT * FROM {clinic_table} WHERE patient_id = ?"
+        temp_df = pd.read_sql(query, conn, params=(patient_id,))
+        
+        if not temp_df.empty:
+            df_oct = temp_df
+            break # We found the patient! Stop checking the other tables.
+            
     conn.close()
     
     return df_eye, df_oct

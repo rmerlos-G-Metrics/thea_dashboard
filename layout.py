@@ -5,7 +5,8 @@ df_patients = load_patient_master_list()
 AVAILABLE_GENDERS = df_patients['gender'].unique().tolist()
 AVAILABLE_GLAUCOMA_TYPES = df_patients['type_of_glaucoma'].unique().tolist()
 AVAILABLE_NPGS_TYPES = df_patients['npgs_type'].unique().tolist()
-AVAILABLE_PLOTS = ['Shift Analysis', 'EWMA IOP', 'Visual Field', 'MRW', 'RNFLT']
+# ADDED the two new plots here
+AVAILABLE_PLOTS = ['Shift Analysis', 'EWMA IOP', 'Bollinger Bands', 'STL Decomposition', 'Visual Field', 'MRW', 'RNFLT']
 
 def create_filter_panel(panel_id):
     return html.Div(
@@ -26,13 +27,10 @@ def create_filter_panel(panel_id):
                 
                 html.Label("Select Patient:", style={'fontWeight': 'bold', 'color': '#0369a1'}),
                 dcc.Dropdown(id=f'patient-dropdown-{panel_id}', placeholder="Select a patient...", style={'marginBottom': '5px'}),
-                
-                # Patient Info Box
                 html.Div(id=f'patient-info-{panel_id}', style={'display': 'none'})
             ]),
             
-            # --- 2. THE PLOT CONTAINERS (Hidden by default) ---
-            # Shift Analysis Container (with bounded slider)
+            # --- 2. PLOT CONTAINERS ---
             html.Div(id=f'container-shift-{panel_id}', style={'display': 'none'}, children=[
                 html.Div(style={'display': 'flex', 'alignItems': 'center', 'marginBottom': '10px'}, children=[
                     html.Label("Adjust OCT Shift (Days):", style={'fontWeight': 'bold', 'marginRight': '15px', 'color': '#0369a1'}),
@@ -41,13 +39,36 @@ def create_filter_panel(panel_id):
                 dcc.Graph(id=f'graph-shift-{panel_id}')
             ]),
 
-            # EWMA Container (with bounded slider)
             html.Div(id=f'container-ewma-{panel_id}', style={'display': 'none'}, children=[
                 html.Div(style={'display': 'flex', 'alignItems': 'center', 'marginBottom': '10px'}, children=[
                     html.Label("Adjust EWMA Smoothing (α):", style={'fontWeight': 'bold', 'marginRight': '15px'}),
                     html.Div(dcc.Slider(id=f'alpha-slider-{panel_id}', min=0.1, max=0.99, step=0.05, value=0.3), style={'flex': '1'})
                 ]),
                 dcc.Graph(id=f'graph-ewma-{panel_id}')
+            ]),
+
+            # NEW: Bollinger Bands Container
+            html.Div(id=f'container-bollinger-{panel_id}', style={'display': 'none'}, children=[
+                html.Div(style={'display': 'flex', 'gap': '20px', 'marginBottom': '10px'}, children=[
+                    html.Div(style={'flex': '1'}, children=[
+                        html.Label("BB Window (Hours):", style={'fontWeight': 'bold'}),
+                        dcc.Slider(id=f'bb-window-slider-{panel_id}', min=3, max=48, step=1, value=12)
+                    ]),
+                    html.Div(style={'flex': '1'}, children=[
+                        html.Label("BB Std Dev (k):", style={'fontWeight': 'bold'}),
+                        dcc.Slider(id=f'bb-k-slider-{panel_id}', min=1.0, max=3.5, step=0.1, value=2.0)
+                    ])
+                ]),
+                dcc.Graph(id=f'graph-bollinger-{panel_id}')
+            ]),
+
+            # NEW: STL Decomposition Container
+            html.Div(id=f'container-stl-{panel_id}', style={'display': 'none'}, children=[
+                html.Div(style={'display': 'flex', 'alignItems': 'center', 'marginBottom': '10px'}, children=[
+                    html.Label("STL Period (Hours):", style={'fontWeight': 'bold', 'marginRight': '15px'}),
+                    html.Div(dcc.Slider(id=f'stl-period-slider-{panel_id}', min=6, max=48, step=1, value=24), style={'flex': '1'})
+                ]),
+                dcc.Graph(id=f'graph-stl-{panel_id}')
             ]),
 
             # Standard Plots

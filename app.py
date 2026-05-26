@@ -75,15 +75,15 @@ def toggle_view_2(plots): return toggle_plot_containers(plots)
 # --- Graph Figures (Now mapping 7 outputs and the new slider inputs) ---
 @app.callback(
     [Output('graph-shift-1', 'figure'), Output('graph-ewma-1', 'figure'), Output('graph-bollinger-1', 'figure'), Output('graph-stl-1', 'figure'), Output('graph-vf-1', 'figure'), Output('graph-mrw-1', 'figure'), Output('graph-rnflt-1', 'figure'), Output('graph-gat-argos-1', 'figure')],
-    [Input('patient-dropdown-1', 'value'), Input('alpha-slider-1', 'value'), Input('shift-slider-1', 'value'), Input('bb-window-slider-1', 'value'), Input('bb-k-slider-1', 'value'), Input('stl-period-slider-1', 'value'), Input('plot-selector-1', 'value')]
+    [Input('patient-dropdown-1', 'value'), Input('alpha-slider-1', 'value'), Input('shift-slider-1', 'value'), Input('bb-window-slider-1', 'value'), Input('bb-k-slider-1', 'value'), Input('stl-period-slider-1', 'value'), Input('plot-selector-1', 'value'), Input('limit-iop-1', 'value')]
 )
-def update_figs_1(p, a, s, bbw, bbk, stlp, plots): return generate_all_figures(p, a, s, bbw, bbk, stlp, plots)
+def update_figs_1(p, a, s, bbw, bbk, stlp, plots, limit_iop): return generate_all_figures(p, a, s, bbw, bbk, stlp, plots, limit_iop)
 
 @app.callback(
     [Output('graph-shift-2', 'figure'), Output('graph-ewma-2', 'figure'), Output('graph-bollinger-2', 'figure'), Output('graph-stl-2', 'figure'), Output('graph-vf-2', 'figure'), Output('graph-mrw-2', 'figure'), Output('graph-rnflt-2', 'figure'), Output('graph-gat-argos-2', 'figure')],
-    [Input('patient-dropdown-2', 'value'), Input('alpha-slider-2', 'value'), Input('shift-slider-2', 'value'), Input('bb-window-slider-2', 'value'), Input('bb-k-slider-2', 'value'), Input('stl-period-slider-2', 'value'), Input('plot-selector-2', 'value')]
+    [Input('patient-dropdown-2', 'value'), Input('alpha-slider-2', 'value'), Input('shift-slider-2', 'value'), Input('bb-window-slider-2', 'value'), Input('bb-k-slider-2', 'value'), Input('stl-period-slider-2', 'value'), Input('plot-selector-2', 'value'), Input('limit-iop-2', 'value')]
 )
-def update_figs_2(p, a, s, bbw, bbk, stlp, plots): return generate_all_figures(p, a, s, bbw, bbk, stlp, plots)
+def update_figs_2(p, a, s, bbw, bbk, stlp, plots, limit_iop): return generate_all_figures(p, a, s, bbw, bbk, stlp, plots, limit_iop)
 
 if __name__ == '__main__':
     app.run(debug=True)

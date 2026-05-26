@@ -4,6 +4,14 @@ from plotly.subplots import make_subplots
 from statsmodels.tsa.seasonal import STL # NEW IMPORT
 from queries import get_patient_data, get_visit_data
 
+def apply_system_overlays(fig, limit_iop):
+    if limit_iop is not None:
+        fig.add_hline(
+            y=limit_iop, line_dash="dash", line_color="red", layer="below", 
+            annotation_text=f"Limit: {limit_iop}mmHg", annotation_position="top right"
+        )
+    return fig
+
 def build_category_fig(df, columns, title, y_label):
     fig = go.Figure()
     if df.empty: return fig.update_layout(title=f"No data for {title}", template="plotly_white")
@@ -18,7 +26,7 @@ def build_category_fig(df, columns, title, y_label):
     return fig
 
 # ADDED new parameters and selected_plots to the function signature
-def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, stl_period, selected_plots):
+def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, stl_period, selected_plots, limit_iop):
     empty_fig = go.Figure().update_layout(template="plotly_white", title="Select a patient to view data")
     
     if not selected_patient or not selected_plots:
@@ -71,7 +79,6 @@ def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, s
         if not df_eye.empty:
             fig_ewma.add_trace(go.Scatter(x=df_eye['time_of_measurement'], y=df_eye['eye_pressure'], mode='markers', marker=dict(color='rgba(59, 130, 246, 0.3)'), name='Raw'))
             fig_ewma.add_trace(go.Scatter(x=df_eye['time_of_measurement'], y=df_eye['ewma'], mode='lines', line=dict(color="#1e750d", width=2.5), name='EWMA'))
-            fig_ewma.add_hline(y=18, line_dash="dash", line_color="red", annotation_text="Target: 18")
         fig_ewma.update_layout(title="IOP & EWMA", template="plotly_white", margin=dict(l=20, r=20, t=50, b=20))
 
     if 'Bollinger Bands' in selected_plots and not resampled.empty:
@@ -93,7 +100,7 @@ def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, s
 
     if 'STL Decomposition' in selected_plots and not resampled.empty:
         if len(resampled) >= stl_period * 2:
-            stl = STL(resampled, period=stl_period, robust=True)
+            stl = STL(resampled, period=stl_period, robust=False)
             result = stl.fit()
             fig_stl = make_subplots(rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.05, subplot_titles=("Observed", "Trend", "Seasonal", "Residuals"))
             fig_stl.add_trace(go.Scatter(x=resampled.index, y=resampled, mode='lines', line_color='#3b82f6', name='Observed'), row=1, col=1)
@@ -152,5 +159,11 @@ def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, s
         else:
             fig_gat_argos = go.Figure().update_layout(title="No visit data for this patient.", template="plotly_white")
 
-    # Now returning 8 figures
+
+
+    plots_to_overlay = [fig_shift, fig_ewma, fig_boll, fig_gat_argos]
+    for fig in plots_to_overlay:
+        if fig.data:  # Only apply if the plot actually generated traces
+            fig = apply_system_overlays(fig, limit_iop)
+
     return fig_shift, fig_ewma, fig_boll, fig_stl, fig_vf, fig_mrw, fig_rnflt, fig_gat_argos

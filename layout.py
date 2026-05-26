@@ -25,6 +25,13 @@ def create_filter_panel(panel_id):
                 html.Label("Select Plots to Display:", style={'fontWeight': 'bold', 'color': '#0369a1'}),
                 dcc.Checklist(id=f'plot-selector-{panel_id}', options=[{'label': f" {p}", 'value': p} for p in AVAILABLE_PLOTS], value=['EWMA IOP'], inline=True, style={'marginBottom': '15px', 'display': 'flex', 'gap': '15px', 'flexWrap': 'wrap'}),
                 
+                html.Div(style={'display': 'flex', 'gap': '20px', 'marginTop': '15px', 'marginBottom': '15px'}, children=[
+                    html.Div(style={'flex': '1'}, children=[
+                        html.Label("Limit IOP Line:", style={'fontWeight': 'bold', 'color': '#0369a1'}),
+                        dcc.Input(id=f'limit-iop-{panel_id}', type='number', value=18, step=1, style={'width': '80px'})
+                    ])
+                ]),
+                
                 html.Label("Select Patient:", style={'fontWeight': 'bold', 'color': '#0369a1'}),
                 dcc.Dropdown(id=f'patient-dropdown-{panel_id}', placeholder="Select a patient...", style={'marginBottom': '5px'}),
                 html.Div(id=f'patient-info-{panel_id}', style={'display': 'none'})

@@ -56,30 +56,31 @@ def toggle_plot_containers(selected_plots):
     s_vf = {'display': 'block'} if 'Visual Field' in selected_plots else hide_style
     s_mrw = {'display': 'block'} if 'MRW' in selected_plots else hide_style
     s_rnflt = {'display': 'block'} if 'RNFLT' in selected_plots else hide_style
+    s_gat_argos = {'display': 'block'} if 'GAT vs ARGOS' in selected_plots else hide_style
     
-    return s_shift, s_ewma, s_boll, s_stl, s_vf, s_mrw, s_rnflt
+    return s_shift, s_ewma, s_boll, s_stl, s_vf, s_mrw, s_rnflt, s_gat_argos
 
 @app.callback(
-    [Output('container-shift-1', 'style'), Output('container-ewma-1', 'style'), Output('container-bollinger-1', 'style'), Output('container-stl-1', 'style'), Output('container-vf-1', 'style'), Output('container-mrw-1', 'style'), Output('container-rnflt-1', 'style')],
+    [Output('container-shift-1', 'style'), Output('container-ewma-1', 'style'), Output('container-bollinger-1', 'style'), Output('container-stl-1', 'style'), Output('container-vf-1', 'style'), Output('container-mrw-1', 'style'), Output('container-rnflt-1', 'style'), Output('container-gat-argos-1', 'style')],
     Input('plot-selector-1', 'value')
 )
 def toggle_view_1(plots): return toggle_plot_containers(plots)
 
 @app.callback(
-    [Output('container-shift-2', 'style'), Output('container-ewma-2', 'style'), Output('container-bollinger-2', 'style'), Output('container-stl-2', 'style'), Output('container-vf-2', 'style'), Output('container-mrw-2', 'style'), Output('container-rnflt-2', 'style')],
+    [Output('container-shift-2', 'style'), Output('container-ewma-2', 'style'), Output('container-bollinger-2', 'style'), Output('container-stl-2', 'style'), Output('container-vf-2', 'style'), Output('container-mrw-2', 'style'), Output('container-rnflt-2', 'style'), Output('container-gat-argos-2', 'style')],
     Input('plot-selector-2', 'value')
 )
 def toggle_view_2(plots): return toggle_plot_containers(plots)
 
 # --- Graph Figures (Now mapping 7 outputs and the new slider inputs) ---
 @app.callback(
-    [Output('graph-shift-1', 'figure'), Output('graph-ewma-1', 'figure'), Output('graph-bollinger-1', 'figure'), Output('graph-stl-1', 'figure'), Output('graph-vf-1', 'figure'), Output('graph-mrw-1', 'figure'), Output('graph-rnflt-1', 'figure')],
+    [Output('graph-shift-1', 'figure'), Output('graph-ewma-1', 'figure'), Output('graph-bollinger-1', 'figure'), Output('graph-stl-1', 'figure'), Output('graph-vf-1', 'figure'), Output('graph-mrw-1', 'figure'), Output('graph-rnflt-1', 'figure'), Output('graph-gat-argos-1', 'figure')],
     [Input('patient-dropdown-1', 'value'), Input('alpha-slider-1', 'value'), Input('shift-slider-1', 'value'), Input('bb-window-slider-1', 'value'), Input('bb-k-slider-1', 'value'), Input('stl-period-slider-1', 'value'), Input('plot-selector-1', 'value')]
 )
 def update_figs_1(p, a, s, bbw, bbk, stlp, plots): return generate_all_figures(p, a, s, bbw, bbk, stlp, plots)
 
 @app.callback(
-    [Output('graph-shift-2', 'figure'), Output('graph-ewma-2', 'figure'), Output('graph-bollinger-2', 'figure'), Output('graph-stl-2', 'figure'), Output('graph-vf-2', 'figure'), Output('graph-mrw-2', 'figure'), Output('graph-rnflt-2', 'figure')],
+    [Output('graph-shift-2', 'figure'), Output('graph-ewma-2', 'figure'), Output('graph-bollinger-2', 'figure'), Output('graph-stl-2', 'figure'), Output('graph-vf-2', 'figure'), Output('graph-mrw-2', 'figure'), Output('graph-rnflt-2', 'figure'), Output('graph-gat-argos-2', 'figure')],
     [Input('patient-dropdown-2', 'value'), Input('alpha-slider-2', 'value'), Input('shift-slider-2', 'value'), Input('bb-window-slider-2', 'value'), Input('bb-k-slider-2', 'value'), Input('stl-period-slider-2', 'value'), Input('plot-selector-2', 'value')]
 )
 def update_figs_2(p, a, s, bbw, bbk, stlp, plots): return generate_all_figures(p, a, s, bbw, bbk, stlp, plots)

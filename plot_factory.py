@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from statsmodels.tsa.seasonal import STL # NEW IMPORT
-from queries import get_patient_data
+from queries import get_patient_data, get_visit_data
 
 def build_category_fig(df, columns, title, y_label):
     fig = go.Figure()
@@ -22,7 +22,7 @@ def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, s
     empty_fig = go.Figure().update_layout(template="plotly_white", title="Select a patient to view data")
     
     if not selected_patient or not selected_plots:
-        return empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
     # Provide safe defaults if sliders are still loading
     alpha = alpha if alpha is not None else 0.3
@@ -48,7 +48,7 @@ def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, s
         resampled = pdf['eye_pressure'].resample('1h').mean().interpolate(method='linear')
 
     # Initialize all figures as empty
-    fig_shift, fig_ewma, fig_boll, fig_stl, fig_vf, fig_mrw, fig_rnflt = empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+    fig_shift, fig_ewma, fig_boll, fig_stl, fig_vf, fig_mrw, fig_rnflt, fig_gat_argos = empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
     # --- 2. GENERATE PLOTS CONDITIONALLY ---
     if 'Shift Analysis' in selected_plots:
@@ -108,5 +108,49 @@ def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, s
     if 'MRW' in selected_plots: fig_mrw = build_category_fig(df_oct, ['mrw_ti', 'mrw_t', 'mrw_ts', 'mrw_ns', 'mrw_n', 'mrw_ni', 'mrw_gc', 'mrw_g'], "MRW", "μm")
     if 'RNFLT' in selected_plots: fig_rnflt = build_category_fig(df_oct, ['rnfl_ti', 'rnfl_t', 'rnfl_ts', 'rnfl_ns', 'rnfl_n', 'rnfl_ni', 'rnfl_gc', 'rnfl_g'], "RNFLT", "μm")
 
-    # Now returning 7 figures
-    return fig_shift, fig_ewma, fig_boll, fig_stl, fig_vf, fig_mrw, fig_rnflt
+    if 'GAT vs ARGOS' in selected_plots:
+        df_visits = get_visit_data(selected_patient)
+        fig_gat_argos = go.Figure()
+        
+        if not df_visits.empty:
+            df_visits['date'] = pd.to_datetime(df_visits['date'], errors='coerce')
+            df_visits = df_visits.sort_values('date')
+            
+            # We map the continuous X-axis to the dates
+            x_vals = df_visits['date']
+            
+            # We create custom text for the labels: "YYYY-MM-DD<br>VisitLabel"
+            custom_labels = df_visits['date'].dt.strftime('%Y-%m-%d') + '<br>(' + df_visits['mnpvislabel'].astype(str) + ')'
+            
+            # Plot Baseline (GAT)
+            fig_gat_argos.add_trace(go.Scatter(
+                x=x_vals, y=df_visits['gat_mean'], 
+                mode='lines+markers', name='GAT (Clinical Standard)',
+                marker=dict(symbol='square', size=8), line=dict(color='#cf6b3a', width=2)
+            ))
+            
+            # Plot Sensor (ARGOS)
+            fig_gat_argos.add_trace(go.Scatter(
+                x=x_vals, y=df_visits['argos_mean'], 
+                mode='lines+markers', name='ARGOS (Sensor)',
+                marker=dict(symbol='circle', size=8), line=dict(color='#3b82f6', width=2)
+            ))
+            
+            # Update Layout with our custom X-axis ticks
+            fig_gat_argos.update_layout(
+                title="Sensor Validation: GAT vs ARGOS Mean IOP",
+                yaxis_title="Intraocular Pressure (mmHg)",
+                xaxis=dict(
+                    tickmode='array',
+                    tickvals=x_vals,        # Where the tick goes mathematically
+                    ticktext=custom_labels  # What the user actually reads
+                ),
+                hovermode="x unified",
+                template="plotly_white",
+                margin=dict(l=20, r=20, t=50, b=60)
+            )
+        else:
+            fig_gat_argos = go.Figure().update_layout(title="No visit data for this patient.", template="plotly_white")
+
+    # Now returning 8 figures
+    return fig_shift, fig_ewma, fig_boll, fig_stl, fig_vf, fig_mrw, fig_rnflt, fig_gat_argos

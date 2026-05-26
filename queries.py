@@ -47,3 +47,10 @@ def get_patient_data(patient_id):
     conn.close()
     
     return df_eye, df_oct
+
+def get_visit_data(patient_id):
+    conn = sqlite3.connect(DB_PATH)
+    query = "SELECT date, mnpvislabel, gat_mean, argos_mean FROM all_visits WHERE patient_id = ?"
+    df_visits = pd.read_sql(query, conn, params=(patient_id,))
+    conn.close()
+    return df_visits

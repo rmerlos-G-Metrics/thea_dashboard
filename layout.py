@@ -6,7 +6,7 @@ AVAILABLE_GENDERS = df_patients['gender'].unique().tolist()
 AVAILABLE_GLAUCOMA_TYPES = df_patients['type_of_glaucoma'].unique().tolist()
 AVAILABLE_NPGS_TYPES = df_patients['npgs_type'].unique().tolist()
 # ADDED the two new plots here
-AVAILABLE_PLOTS = ['Shift Analysis', 'EWMA IOP', 'Bollinger Bands', 'STL Decomposition', 'Visual Field', 'MRW', 'RNFLT']
+AVAILABLE_PLOTS = ['Shift Analysis', 'EWMA IOP', 'GAT vs ARGOS','Bollinger Bands', 'STL Decomposition', 'Visual Field', 'MRW', 'RNFLT']
 
 def create_filter_panel(panel_id):
     return html.Div(
@@ -45,6 +45,10 @@ def create_filter_panel(panel_id):
                     html.Div(dcc.Slider(id=f'alpha-slider-{panel_id}', min=0.1, max=0.99, step=0.05, value=0.3), style={'flex': '1'})
                 ]),
                 dcc.Graph(id=f'graph-ewma-{panel_id}')
+            ]),
+
+            html.Div(id=f'container-gat-argos-{panel_id}', style={'display': 'none'}, children=[
+                dcc.Graph(id=f'graph-gat-argos-{panel_id}', style={'marginBottom': '20px'})
             ]),
 
             # NEW: Bollinger Bands Container

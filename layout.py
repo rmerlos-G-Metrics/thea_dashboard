@@ -6,7 +6,41 @@ AVAILABLE_GENDERS = df_patients['gender'].unique().tolist()
 AVAILABLE_GLAUCOMA_TYPES = df_patients['type_of_glaucoma'].unique().tolist()
 AVAILABLE_NPGS_TYPES = df_patients['npgs_type'].unique().tolist()
 # ADDED the two new plots here
-AVAILABLE_PLOTS = ['Shift Analysis', 'EWMA IOP', 'GAT vs ARGOS','Bollinger Bands', 'STL Decomposition', 'Visual Field', 'MRW', 'RNFLT']
+AVAILABLE_PLOTS = ['Shift Analysis', 'EWMA IOP', 'GAT vs ARGOS', 'STL Decomposition', 'Visual Field', 'MRW', 'RNFLT'] # Bolinger Bands removed from default selection
+
+def get_login_layout():
+    """Generates a modern, native HTML login interface panel."""
+    return html.Div(
+        style={
+            'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center', 
+            'justifyContent': 'center', 'height': '100vh', 'backgroundColor': '#f1f5f9',
+            'fontFamily': 'Arial, sans-serif'
+        },
+        children=[
+            html.Div(
+                style={
+                    'padding': '30px', 'backgroundColor': '#ffffff', 'borderRadius': '8px',
+                    'boxShadow': '0 4px 6px -1px rgb(0 0 0 / 0.1)', 'width': '350px'
+                },
+                children=[
+                    html.H2("THEA Dashboard Login", style={'textAlign': 'center', 'color': '#0f172a', 'marginBottom': '20px'}),
+                    
+                    html.Label("Username", style={'fontWeight': 'bold', 'color': '#334155'}),
+                    dcc.Input(id='login-username', type='text', placeholder='Enter username', 
+                              style={'width': '100%', 'padding': '0px', 'margin': '8px 0 20px 0', 'borderRadius': '4px', 'border': '1px solid #cbd5e1', 'boxSizing': 'border-box'}),
+                    
+                    html.Label("Password", style={'fontWeight': 'bold', 'color': '#334155'}),
+                    dcc.Input(id='login-password', type='password', placeholder='Enter password', 
+                              style={'width': '100%', 'padding': '0px', 'margin': '8px 0 20px 0', 'borderRadius': '4px', 'border': '1px solid #cbd5e1', 'boxSizing': 'border-box'}),
+                    
+                    html.Button('Sign In', id='login-button', n_clicks=0,
+                                style={'width': '100%', 'padding': '12px', 'backgroundColor': '#0369a1', 'color': 'white', 'border': 'none', 'borderRadius': '4px', 'fontWeight': 'bold', 'cursor': 'pointer'}),
+                    
+                    html.Div(id='login-output', style={'marginTop': '15px', 'color': '#ef4444', 'textAlign': 'center', 'fontSize': '14px'})
+                ]
+            )
+        ]
+    )
 
 def create_filter_panel(panel_id):
     return html.Div(
@@ -28,7 +62,7 @@ def create_filter_panel(panel_id):
                 html.Div(style={'display': 'flex', 'gap': '20px', 'marginTop': '15px', 'marginBottom': '15px'}, children=[
                     html.Div(style={'flex': '1'}, children=[
                         html.Label("Limit IOP Line:", style={'fontWeight': 'bold', 'color': '#0369a1'}),
-                        dcc.Input(id=f'limit-iop-{panel_id}', type='number', value=18, step=1, style={'width': '80px'})
+                        dcc.Input(id=f'limit-iop-{panel_id}', type='number', value=21, step=1, style={'width': '80px'})
                     ])
                 ]),
                 

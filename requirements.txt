@@ -1,4 +1,7 @@
-dash==2.14.2
-pandas==2.1.4
-plotly==5.18.0
+dash==4.1.0
+pandas==2.3.3
+plotly==6.7.0
 gunicorn==21.2.0
+python-dotenv==1.2.2
+statsmodels==0.14.6
+scipy==1.15.3

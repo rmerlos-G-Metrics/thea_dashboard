@@ -1,13 +1,55 @@
+import os
 import dash
-from dash import Input, Output, html
-from layout import get_app_layout, df_patients
+from dash import Input, Output, State, html, dcc
+from flask import Flask, session
+from layout import get_app_layout, get_login_layout, df_patients
 from plot_factory import generate_all_figures
+from dotenv import load_dotenv
 
-app = dash.Dash(__name__, suppress_callback_exceptions=True)
-server = app.server
+load_dotenv()  # Load environment variables from .env file
+
+server = Flask(__name__)
+server.secret_key = os.environ.get("FLASK_SECRET_KEY", "super-secret-engineering-key-2026")
+
+app = dash.Dash(__name__, server=server, suppress_callback_exceptions=True)
 app.title = "THEA Trophy - Dashboard"
 
-app.layout = get_app_layout()
+# 2. Extract credentials from environment variables
+USERNAME = os.environ.get("APP_USERNAME")
+PASSWORD = os.environ.get("PASSWORD")
+
+# 3. App Shell Root: Houses the URL location component and a dynamic content container
+app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
+    html.Div(id='page-content')
+])
+
+# 4. ROUTER CALLBACK: Switches between Login Page or Dashboard Layout based on Auth State
+@app.callback(
+    Output('page-content', 'children'),
+    Input('url', 'pathname')
+)
+def display_page(pathname):
+    # Check if the user's browser session cookie holds a valid authentication flag
+    if session.get('authenticated'):
+        return get_app_layout()
+    return get_login_layout()
+
+# 5. AUTHENTICATION CALLBACK: Validates submitted credentials
+@app.callback(
+    [Output('url', 'pathname'), Output('login-output', 'children')],
+    Input('login-button', 'n_clicks'),
+    [State('login-username', 'value'), State('login-password', 'value')],
+    prevent_initial_call=True
+)
+def login_auth(n_clicks, username, password):
+    if n_clicks > 0:
+        if username == USERNAME and password == PASSWORD:
+            session['authenticated'] = True  # Set session variable to True
+            return '/', ''                  # Redirect to root directory to load dashboard
+        else:
+            return dash.no_update, 'Invalid username or password.'
+    return dash.no_update, ''
 
 @app.callback(Output('panel-2', 'style'), Input('view-toggle', 'value'))
 def toggle_split_view(view_mode):

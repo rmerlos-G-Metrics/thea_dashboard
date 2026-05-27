@@ -2,3 +2,4 @@
 THEA.db
 __pycache__
 .env
+.ipynb_checkpoints

@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from statsmodels.tsa.seasonal import STL # NEW IMPORT
+from statsmodels.tsa.seasonal import STL 
 from queries import get_patient_data, get_visit_data
 
 def apply_system_overlays(fig, limit_iop):
@@ -25,7 +25,6 @@ def build_category_fig(df, columns, title, y_label):
     fig.update_layout(title=title, yaxis_title=y_label, hovermode="x unified", template="plotly_white", margin=dict(l=20, r=20, t=50, b=20))
     return fig
 
-# ADDED new parameters and selected_plots to the function signature
 def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, stl_period, selected_plots, limit_iop):
     empty_fig = go.Figure().update_layout(template="plotly_white", title="Select a patient to view data")
     
@@ -39,9 +38,11 @@ def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, s
     bb_k = bb_k if bb_k is not None else 2.0
     stl_period = stl_period if stl_period is not None else 24
 
-    df_eye, df_oct = get_patient_data(selected_patient)
-
     # --- 1. DATA PREP & RESAMPLING ---
+    # Moved get_visit_data to the top so it can be shared across multiple plot blocks
+    df_eye, df_oct = get_patient_data(selected_patient)
+    df_visits = get_visit_data(selected_patient)
+
     resampled = pd.Series(dtype=float)
     if not df_eye.empty:
         df_eye['time_of_measurement'] = pd.to_datetime(df_eye['time_of_measurement'], errors='coerce')
@@ -52,7 +53,6 @@ def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, s
         # Resample for Advanced Math (Bollinger & STL)
         pdf = df_eye.copy()
         pdf.set_index('time_of_measurement', inplace=True)
-        # Assuming 'eye_pressure' is the column name based on previous queries
         resampled = pdf['eye_pressure'].resample('1h').mean().interpolate(method='linear')
 
     # Initialize all figures as empty
@@ -76,11 +76,50 @@ def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, s
 
     if 'EWMA IOP' in selected_plots:
         fig_ewma = go.Figure()
+        
+        # 1. Add Raw & EWMA traces
         if not df_eye.empty:
-            fig_ewma.add_trace(go.Scatter(x=df_eye['time_of_measurement'], y=df_eye['eye_pressure'], mode='markers', marker=dict(color='rgba(59, 130, 246, 0.3)'), name='Raw'))
+            fig_ewma.add_trace(go.Scatter(x=df_eye['time_of_measurement'], y=df_eye['eye_pressure'], mode='markers', marker=dict(color='rgba(59, 130, 246, 0.3)'), name='Raw IOP'))
             fig_ewma.add_trace(go.Scatter(x=df_eye['time_of_measurement'], y=df_eye['ewma'], mode='lines', line=dict(color="#1e750d", width=2.5), name='EWMA'))
-        fig_ewma.update_layout(title="IOP & EWMA", template="plotly_white", margin=dict(l=20, r=20, t=50, b=20))
+        
+        # 2. Add GAT & ARGOS traces
+        if not df_visits.empty:
+            df_visits['date'] = pd.to_datetime(df_visits['date'], errors='coerce')
+            
+            # --- THE FIX: Convert strings with commas to actual numbers ---
+            for col in ['gat_mean', 'argos_mean']:
+                if col in df_visits.columns:
+                    if df_visits[col].dtype == 'object': 
+                        df_visits[col] = df_visits[col].astype(str).str.replace(',', '.')
+                    df_visits[col] = pd.to_numeric(df_visits[col], errors='coerce')
+            # --------------------------------------------------------------
+            
+            df_visits_sorted = df_visits.sort_values('date')
+            
+            # GAT Line (Clinical Standard)
+            fig_ewma.add_trace(go.Scatter(
+                x=df_visits_sorted['date'], 
+                y=df_visits_sorted['gat_mean'], 
+                mode='lines+markers', 
+                name='GAT Mean',
+                marker=dict(symbol='square', size=8), 
+                line=dict(color='#cf6b3a', width=2, dash='dot'),
+                connectgaps=True # Prevents the line from breaking if there's a missing value
+            ))
+            
+            # ARGOS Line (Sensor)
+            fig_ewma.add_trace(go.Scatter(
+                x=df_visits_sorted['date'], 
+                y=df_visits_sorted['argos_mean'], 
+                mode='lines+markers', 
+                name='ARGOS Mean',
+                marker=dict(symbol='circle', size=8), 
+                line=dict(color='#8b5cf6', width=2, dash='dot'),
+                connectgaps=True # Prevents the line from breaking
+            ))
 
+        fig_ewma.update_layout(title="IOP EWMA vs Clinical Sensors (GAT/ARGOS)", yaxis_title="Intraocular Pressure (mmHg)", hovermode="x unified", template="plotly_white", margin=dict(l=20, r=20, t=50, b=20))
+    
     if 'Bollinger Bands' in selected_plots and not resampled.empty:
         rolling_mean = resampled.rolling(window=bb_window, center=True).mean()
         rolling_std = resampled.rolling(window=bb_window, center=True).std()
@@ -116,54 +155,42 @@ def generate_all_figures(selected_patient, alpha, shift_days, bb_window, bb_k, s
     if 'RNFLT' in selected_plots: fig_rnflt = build_category_fig(df_oct, ['rnfl_ti', 'rnfl_t', 'rnfl_ts', 'rnfl_ns', 'rnfl_n', 'rnfl_ni', 'rnfl_gc', 'rnfl_g'], "RNFLT", "μm")
 
     if 'GAT vs ARGOS' in selected_plots:
-        df_visits = get_visit_data(selected_patient)
+        # Note: df_visits is now already fetched at the top! 
         fig_gat_argos = go.Figure()
         
         if not df_visits.empty:
+            # Removed redundant pd.to_datetime logic here as it's handled above if EWMA runs first, 
+            # but kept it safe just in case EWMA isn't selected.
             df_visits['date'] = pd.to_datetime(df_visits['date'], errors='coerce')
-            df_visits = df_visits.sort_values('date')
+            df_visits_sorted = df_visits.sort_values('date')
             
-            # We map the continuous X-axis to the dates
-            x_vals = df_visits['date']
+            x_vals = df_visits_sorted['date']
+            custom_labels = df_visits_sorted['date'].dt.strftime('%Y-%m-%d') + '<br>(' + df_visits_sorted['mnpvislabel'].astype(str) + ')'
             
-            # We create custom text for the labels: "YYYY-MM-DD<br>VisitLabel"
-            custom_labels = df_visits['date'].dt.strftime('%Y-%m-%d') + '<br>(' + df_visits['mnpvislabel'].astype(str) + ')'
-            
-            # Plot Baseline (GAT)
             fig_gat_argos.add_trace(go.Scatter(
-                x=x_vals, y=df_visits['gat_mean'], 
+                x=x_vals, y=df_visits_sorted['gat_mean'], 
                 mode='lines+markers', name='GAT (Clinical Standard)',
                 marker=dict(symbol='square', size=8), line=dict(color='#cf6b3a', width=2)
             ))
             
-            # Plot Sensor (ARGOS)
             fig_gat_argos.add_trace(go.Scatter(
-                x=x_vals, y=df_visits['argos_mean'], 
+                x=x_vals, y=df_visits_sorted['argos_mean'], 
                 mode='lines+markers', name='ARGOS (Sensor)',
                 marker=dict(symbol='circle', size=8), line=dict(color='#3b82f6', width=2)
             ))
             
-            # Update Layout with our custom X-axis ticks
             fig_gat_argos.update_layout(
                 title="Sensor Validation: GAT vs ARGOS Mean IOP",
                 yaxis_title="Intraocular Pressure (mmHg)",
-                xaxis=dict(
-                    tickmode='array',
-                    tickvals=x_vals,        # Where the tick goes mathematically
-                    ticktext=custom_labels  # What the user actually reads
-                ),
-                hovermode="x unified",
-                template="plotly_white",
-                margin=dict(l=20, r=20, t=50, b=60)
+                xaxis=dict(tickmode='array', tickvals=x_vals, ticktext=custom_labels),
+                hovermode="x unified", template="plotly_white", margin=dict(l=20, r=20, t=50, b=60)
             )
         else:
             fig_gat_argos = go.Figure().update_layout(title="No visit data for this patient.", template="plotly_white")
 
-
-
     plots_to_overlay = [fig_shift, fig_ewma, fig_boll, fig_gat_argos]
     for fig in plots_to_overlay:
-        if fig.data:  # Only apply if the plot actually generated traces
+        if fig.data:  
             fig = apply_system_overlays(fig, limit_iop)
 
     return fig_shift, fig_ewma, fig_boll, fig_stl, fig_vf, fig_mrw, fig_rnflt, fig_gat_argos

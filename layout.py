@@ -6,7 +6,7 @@ AVAILABLE_GENDERS = df_patients['gender'].unique().tolist()
 AVAILABLE_GLAUCOMA_TYPES = df_patients['type_of_glaucoma'].unique().tolist()
 AVAILABLE_NPGS_TYPES = df_patients['npgs_type'].unique().tolist()
 
-AVAILABLE_PLOTS = ['EWMA IOP', 'STL Decomposition', 'Visual Field'] 
+AVAILABLE_PLOTS = ['EWMA IOP', 'Box Plot', 'STL Decomposition', 'Visual Field'] 
 AVAILABLE_OVERLAYS = ['GAT', 'ARGOS', 'MRW', 'RNFL']
 STL_COMPONENTS = ['Trend', 'Seasonal', 'Residuals']
 
@@ -55,18 +55,15 @@ def create_filter_panel(panel_id):
                 ]),
                 html.Hr(),
                 
-                # Plot selection
                 html.Label("Select Main Plots:", style={'fontWeight': 'bold', 'color': '#0369a1'}),
                 dcc.Checklist(id=f'plot-selector-{panel_id}', options=[{'label': f" {p}", 'value': p} for p in AVAILABLE_PLOTS], value=['EWMA IOP'], inline=True, style={'marginBottom': '15px', 'display': 'flex', 'gap': '15px', 'flexWrap': 'wrap'}),
                 
-                # STL sub-components
                 html.Div(id=f'stl-controls-{panel_id}', children=[
                     html.Label("STL Components to Display:", style={'fontWeight': 'bold', 'color': '#0ea5e9'}),
                     dcc.Checklist(id=f'stl-selector-{panel_id}', options=[{'label': f" {p}", 'value': p} for p in STL_COMPONENTS], value=['Trend'], inline=True, style={'marginBottom': '15px', 'display': 'flex', 'gap': '15px', 'flexWrap': 'wrap'}),
                 ]),
 
-                # Global Overlays
-                html.Label("Global Data Overlays (Applies to EWMA & STL):", style={'fontWeight': 'bold', 'color': '#8b5cf6'}),
+                html.Label("Global Data Overlays (Applies to EWMA, Box Plot & STL):", style={'fontWeight': 'bold', 'color': '#8b5cf6'}),
                 dcc.Checklist(id=f'overlay-selector-{panel_id}', options=[{'label': f" {p}", 'value': p} for p in AVAILABLE_OVERLAYS], value=['GAT', 'ARGOS'], inline=True, style={'marginBottom': '15px', 'display': 'flex', 'gap': '15px', 'flexWrap': 'wrap'}),
 
                 # Multi-slider grid
@@ -76,16 +73,20 @@ def create_filter_panel(panel_id):
                         dcc.Slider(id=f'iop-offset-slider-{panel_id}', min=0, max=365, step=5, value=0)
                     ]),
                     html.Div(children=[
-                        html.Label("Limit IOP Line (mmHg):", style={'fontWeight': 'bold', 'color': '#0369a1'}),
-                        dcc.Input(id=f'limit-iop-{panel_id}', type='number', value=21, step=1, style={'width': '100%'})
+                        html.Label("Box Plot Window (Days):", style={'fontWeight': 'bold', 'color': '#f59e0b'}),
+                        dcc.Slider(id=f'boxplot-window-slider-{panel_id}', min=1, max=60, step=1, value=7)
                     ]),
                     html.Div(children=[
                         html.Label("MRW Shift (Days):", style={'fontWeight': 'bold'}),
-                        dcc.Slider(id=f'mrw-shift-slider-{panel_id}', min=-365, max=365, step=5, value=0)
+                        dcc.Slider(id=f'mrw-shift-slider-{panel_id}', min=0, max=365, step=5, value=0)
                     ]),
                     html.Div(children=[
                         html.Label("RNFL Shift (Days):", style={'fontWeight': 'bold'}),
-                        dcc.Slider(id=f'rnfl-shift-slider-{panel_id}', min=-365, max=365, step=5, value=0)
+                        dcc.Slider(id=f'rnfl-shift-slider-{panel_id}', min=0, max=365, step=5, value=0)
+                    ]),
+                    html.Div(style={'gridColumn': 'span 2'}, children=[
+                        html.Label("Limit IOP Line (mmHg):", style={'fontWeight': 'bold', 'color': '#0369a1'}),
+                        dcc.Input(id=f'limit-iop-{panel_id}', type='number', value=21, step=1, style={'width': '100%'})
                     ])
                 ]),
                 
@@ -103,13 +104,14 @@ def create_filter_panel(panel_id):
                 dcc.Graph(id=f'graph-ewma-{panel_id}')
             ]),
 
+            html.Div(id=f'container-boxplot-{panel_id}', style={'display': 'none'}, children=[dcc.Graph(id=f'graph-boxplot-{panel_id}', style={'marginBottom': '20px'})]),
+
             html.Div(id=f'container-stl-trend-{panel_id}', style={'display': 'none'}, children=[dcc.Graph(id=f'graph-stl-trend-{panel_id}', style={'marginBottom': '20px'})]),
             html.Div(id=f'container-stl-seasonal-{panel_id}', style={'display': 'none'}, children=[dcc.Graph(id=f'graph-stl-seasonal-{panel_id}', style={'marginBottom': '20px'})]),
             html.Div(id=f'container-stl-resid-{panel_id}', style={'display': 'none'}, children=[dcc.Graph(id=f'graph-stl-resid-{panel_id}', style={'marginBottom': '20px'})]),
 
             html.Div(id=f'container-vf-{panel_id}', style={'display': 'none'}, children=[dcc.Graph(id=f'graph-vf-{panel_id}', style={'marginBottom': '20px'})]),
             
-            # Hidden STL control slider (since we need it for STL but might not want it cluttering the top)
             html.Div(style={'display': 'none'}, children=[dcc.Slider(id=f'stl-period-slider-{panel_id}', min=6, max=48, step=1, value=24)])
         ]
     )

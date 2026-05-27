@@ -77,6 +77,7 @@ def toggle_plot_containers(selected_plots, stl_components):
     hide_style = {'display': 'none'}
     
     s_ewma = block_style if 'EWMA IOP' in selected_plots else hide_style
+    s_boxplot = block_style if 'Box Plot' in selected_plots else hide_style
     s_vf = {'display': 'block'} if 'Visual Field' in selected_plots else hide_style
     
     stl_active = 'STL Decomposition' in selected_plots
@@ -84,37 +85,36 @@ def toggle_plot_containers(selected_plots, stl_components):
     s_stl_seasonal = block_style if stl_active and 'Seasonal' in stl_components else hide_style
     s_stl_resid = block_style if stl_active and 'Residuals' in stl_components else hide_style
     
-    # Hide/show STL sub-controls
     s_stl_controls = {'display': 'block'} if stl_active else hide_style
 
-    return s_ewma, s_stl_trend, s_stl_seasonal, s_stl_resid, s_vf, s_stl_controls
+    return s_ewma, s_boxplot, s_stl_trend, s_stl_seasonal, s_stl_resid, s_vf, s_stl_controls
 
 @app.callback(
-    [Output('container-ewma-1', 'style'), Output('container-stl-trend-1', 'style'), Output('container-stl-seasonal-1', 'style'), Output('container-stl-resid-1', 'style'), Output('container-vf-1', 'style'), Output('stl-controls-1', 'style')],
+    [Output('container-ewma-1', 'style'), Output('container-boxplot-1', 'style'), Output('container-stl-trend-1', 'style'), Output('container-stl-seasonal-1', 'style'), Output('container-stl-resid-1', 'style'), Output('container-vf-1', 'style'), Output('stl-controls-1', 'style')],
     [Input('plot-selector-1', 'value'), Input('stl-selector-1', 'value')]
 )
 def toggle_view_1(plots, stl): return toggle_plot_containers(plots, stl)
 
 @app.callback(
-    [Output('container-ewma-2', 'style'), Output('container-stl-trend-2', 'style'), Output('container-stl-seasonal-2', 'style'), Output('container-stl-resid-2', 'style'), Output('container-vf-2', 'style'), Output('stl-controls-2', 'style')],
+    [Output('container-ewma-2', 'style'), Output('container-boxplot-2', 'style'), Output('container-stl-trend-2', 'style'), Output('container-stl-seasonal-2', 'style'), Output('container-stl-resid-2', 'style'), Output('container-vf-2', 'style'), Output('stl-controls-2', 'style')],
     [Input('plot-selector-2', 'value'), Input('stl-selector-2', 'value')]
 )
 def toggle_view_2(plots, stl): return toggle_plot_containers(plots, stl)
 
 
 @app.callback(
-    [Output('graph-ewma-1', 'figure'), Output('graph-stl-trend-1', 'figure'), Output('graph-stl-seasonal-1', 'figure'), Output('graph-stl-resid-1', 'figure'), Output('graph-vf-1', 'figure')],
-    [Input('patient-dropdown-1', 'value'), Input('alpha-slider-1', 'value'), Input('mrw-shift-slider-1', 'value'), Input('rnfl-shift-slider-1', 'value'), Input('iop-offset-slider-1', 'value'), Input('stl-period-slider-1', 'value'), Input('plot-selector-1', 'value'), Input('stl-selector-1', 'value'), Input('overlay-selector-1', 'value'), Input('limit-iop-1', 'value')]
+    [Output('graph-ewma-1', 'figure'), Output('graph-boxplot-1', 'figure'), Output('graph-stl-trend-1', 'figure'), Output('graph-stl-seasonal-1', 'figure'), Output('graph-stl-resid-1', 'figure'), Output('graph-vf-1', 'figure')],
+    [Input('patient-dropdown-1', 'value'), Input('alpha-slider-1', 'value'), Input('mrw-shift-slider-1', 'value'), Input('rnfl-shift-slider-1', 'value'), Input('iop-offset-slider-1', 'value'), Input('boxplot-window-slider-1', 'value'), Input('stl-period-slider-1', 'value'), Input('plot-selector-1', 'value'), Input('stl-selector-1', 'value'), Input('overlay-selector-1', 'value'), Input('limit-iop-1', 'value')]
 )
-def update_figs_1(p, a, mrw_s, rnfl_s, iop_offset, stlp, plots, stl_c, overlays, limit): 
-    return generate_all_figures(p, a, mrw_s, rnfl_s, iop_offset, stlp, plots, stl_c, overlays, limit)
+def update_figs_1(p, a, mrw_s, rnfl_s, iop_offset, bp_win, stlp, plots, stl_c, overlays, limit): 
+    return generate_all_figures(p, a, mrw_s, rnfl_s, iop_offset, bp_win, stlp, plots, stl_c, overlays, limit)
 
 @app.callback(
-    [Output('graph-ewma-2', 'figure'), Output('graph-stl-trend-2', 'figure'), Output('graph-stl-seasonal-2', 'figure'), Output('graph-stl-resid-2', 'figure'), Output('graph-vf-2', 'figure')],
-    [Input('patient-dropdown-2', 'value'), Input('alpha-slider-2', 'value'), Input('mrw-shift-slider-2', 'value'), Input('rnfl-shift-slider-2', 'value'), Input('iop-offset-slider-2', 'value'), Input('stl-period-slider-2', 'value'), Input('plot-selector-2', 'value'), Input('stl-selector-2', 'value'), Input('overlay-selector-2', 'value'), Input('limit-iop-2', 'value')]
+    [Output('graph-ewma-2', 'figure'), Output('graph-boxplot-2', 'figure'), Output('graph-stl-trend-2', 'figure'), Output('graph-stl-seasonal-2', 'figure'), Output('graph-stl-resid-2', 'figure'), Output('graph-vf-2', 'figure')],
+    [Input('patient-dropdown-2', 'value'), Input('alpha-slider-2', 'value'), Input('mrw-shift-slider-2', 'value'), Input('rnfl-shift-slider-2', 'value'), Input('iop-offset-slider-2', 'value'), Input('boxplot-window-slider-2', 'value'), Input('stl-period-slider-2', 'value'), Input('plot-selector-2', 'value'), Input('stl-selector-2', 'value'), Input('overlay-selector-2', 'value'), Input('limit-iop-2', 'value')]
 )
-def update_figs_2(p, a, mrw_s, rnfl_s, iop_offset, stlp, plots, stl_c, overlays, limit): 
-    return generate_all_figures(p, a, mrw_s, rnfl_s, iop_offset, stlp, plots, stl_c, overlays, limit)
+def update_figs_2(p, a, mrw_s, rnfl_s, iop_offset, bp_win, stlp, plots, stl_c, overlays, limit): 
+    return generate_all_figures(p, a, mrw_s, rnfl_s, iop_offset, bp_win, stlp, plots, stl_c, overlays, limit)
 
 if __name__ == '__main__':
     app.run(debug=True)

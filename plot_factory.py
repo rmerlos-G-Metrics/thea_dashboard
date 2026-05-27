@@ -40,14 +40,12 @@ def add_global_overlays(fig, df_visits, df_oct, mrw_shift, rnfl_shift, overlays)
             
     # 2. Secondary Y-Axis Overlays (OCT based - µm)
     if not df_oct.empty:
-        # Dynamic Fallback: Use 'mrw_g' if it exists, otherwise use 'mrw_gc'
         mrw_col = 'mrw_g' if 'mrw_g' in df_oct.columns else 'mrw_gc' if 'mrw_gc' in df_oct.columns else None
         if mrw_col:
             viz_mrw = True if 'MRW' in overlays else 'legendonly'
             mrw_dates = pd.to_datetime(df_oct['date'], errors='coerce') + pd.to_timedelta(mrw_shift, unit='d')
             fig.add_trace(go.Scatter(x=mrw_dates, y=df_oct[mrw_col], mode='lines+markers', name=f'MRW {mrw_col.upper()} (Shift: {mrw_shift}d)', marker=dict(symbol='diamond'), line=dict(color='#0ea5e9', dash='longdash'), connectgaps=True, visible=viz_mrw), secondary_y=True)
 
-        # Dynamic Fallback: Use 'rnfl_g' if it exists, otherwise use 'rnfl_gc'
         rnfl_col = 'rnfl_g' if 'rnfl_g' in df_oct.columns else 'rnfl_gc' if 'rnfl_gc' in df_oct.columns else None
         if rnfl_col:
             viz_rnfl = True if 'RNFL' in overlays else 'legendonly'
@@ -56,17 +54,18 @@ def add_global_overlays(fig, df_visits, df_oct, mrw_shift, rnfl_shift, overlays)
             
     return fig
 
-def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, iop_offset, stl_period, selected_plots, stl_components, global_overlays, limit_iop):
+def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, iop_offset, boxplot_window, stl_period, selected_plots, stl_components, global_overlays, limit_iop):
     empty_fig = go.Figure().update_layout(template="plotly_white", title="Select a patient to view data")
     
     if not selected_patient or not selected_plots:
-        return empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+        return empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
     # Safe defaults
     alpha = alpha if alpha is not None else 0.3
     mrw_shift = mrw_shift if mrw_shift is not None else 0
     rnfl_shift = rnfl_shift if rnfl_shift is not None else 0
     iop_offset = iop_offset if iop_offset is not None else 0
+    boxplot_window = boxplot_window if boxplot_window is not None else 7
     stl_period = stl_period if stl_period is not None else 24
     if not global_overlays: global_overlays = []
     if not stl_components: stl_components = []
@@ -83,7 +82,6 @@ def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, iop_off
                 df_visits[col] = pd.to_numeric(df_visits[col], errors='coerce')
         df_visits = df_visits.sort_values('date')
 
-    # Convert potentially available OCT columns
     if not df_oct.empty:
         for col in ['mrw_g', 'mrw_gc', 'rnfl_g', 'rnfl_gc']:
             if col in df_oct.columns:
@@ -96,13 +94,12 @@ def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, iop_off
         df_eye['eye_pressure'] = pd.to_numeric(df_eye['eye_pressure'], errors='coerce')
         df_eye = df_eye.dropna().sort_values('time_of_measurement')
         
-        # --- NEW: Apply Time Offset specifically to IOP data ---
+        # --- Apply Time Offset specifically to IOP data ---
         if iop_offset > 0:
             first_measurement_date = df_eye['time_of_measurement'].min()
             start_date = first_measurement_date + pd.to_timedelta(iop_offset, unit='d')
             df_eye = df_eye[df_eye['time_of_measurement'] >= start_date]
 
-        # Recalculate EWMA and STL on the newly filtered timeframe
         if not df_eye.empty:
             df_eye['ewma'] = df_eye['eye_pressure'].ewm(alpha=alpha, adjust=False).mean()
             
@@ -111,7 +108,7 @@ def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, iop_off
             resampled = pdf['eye_pressure'].resample('1h').mean().interpolate(method='linear')
 
     # Initialize all figures as empty
-    fig_ewma, fig_stl_t, fig_stl_s, fig_stl_r, fig_vf = empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
+    fig_ewma, fig_boxplot, fig_stl_t, fig_stl_s, fig_stl_r, fig_vf = empty_fig, empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
 
     # --- 2. GENERATE PLOTS CONDITIONALLY ---
 
@@ -122,21 +119,35 @@ def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, iop_off
             fig_ewma.add_trace(go.Scatter(x=df_eye['time_of_measurement'], y=df_eye['ewma'], mode='lines', line=dict(color="#1e750d", width=2.5), name='EWMA'), secondary_y=False)
         
         fig_ewma = add_global_overlays(fig_ewma, df_visits, df_oct, mrw_shift, rnfl_shift, global_overlays)
-        
-        fig_ewma.update_layout(
-            title=f"IOP EWMA Integrated View (Offset: {iop_offset} days)", 
-            yaxis_title="Intraocular Pressure (mmHg)", 
-            yaxis2_title="OCT Thickness (μm)",
-            hovermode="x unified", template="plotly_white", margin=dict(l=20, r=20, t=50, b=20)
-        )
+        fig_ewma.update_layout(title=f"IOP EWMA Integrated View (Offset: {iop_offset} days)", yaxis_title="Intraocular Pressure (mmHg)", yaxis2_title="OCT Thickness (μm)", hovermode="x unified", template="plotly_white", margin=dict(l=20, r=20, t=50, b=20))
         fig_ewma = apply_system_overlays(fig_ewma, limit_iop)
+
+    if 'Box Plot' in selected_plots:
+        fig_boxplot = make_subplots(specs=[[{"secondary_y": True}]])
+        if not df_eye.empty:
+            pdf = df_eye.copy()
+            # Calculate groups based on the filtered data
+            start_date = pdf['time_of_measurement'].min().floor('D')
+            pdf['days_since'] = (pdf['time_of_measurement'] - start_date).dt.days
+            pdf['bin_idx'] = pdf['days_since'] // boxplot_window
+            pdf['Window_Start'] = start_date + pd.to_timedelta(pdf['bin_idx'] * boxplot_window, unit='D')
+            pdf = pdf.sort_values('Window_Start')
+            
+            df_medians = pdf.groupby('Window_Start', sort=False)['eye_pressure'].median().reset_index()
+
+            fig_boxplot.add_trace(go.Box(x=pdf['Window_Start'], y=pdf['eye_pressure'], name='Eye Pressure', marker_color='#3b82f6', boxmean='sd', boxpoints='outliers'), secondary_y=False)
+            fig_boxplot.add_trace(go.Scatter(x=df_medians['Window_Start'], y=df_medians['eye_pressure'], mode='lines', name="Median Trends", line=dict(color='#cf6b3a', width=3)), secondary_y=False)
+
+        # Apply the exact same overlays!
+        fig_boxplot = add_global_overlays(fig_boxplot, df_visits, df_oct, mrw_shift, rnfl_shift, global_overlays)
+        fig_boxplot.update_layout(title=f"IOP Distribution (Grouped every {boxplot_window} days) [Offset: {iop_offset} days]", xaxis_title="Window Start Date", yaxis_title="Intraocular Pressure (mmHg)", yaxis2_title="OCT (μm)", template="plotly_white", margin=dict(l=20, r=20, t=50, b=20), height=700)
+        fig_boxplot = apply_system_overlays(fig_boxplot, limit_iop)
 
     if 'STL Decomposition' in selected_plots and not resampled.empty:
         if len(resampled) >= stl_period * 2:
             stl = STL(resampled, period=stl_period, robust=False)
             result = stl.fit()
             
-            # Sub-plot Trend
             if 'Trend' in stl_components:
                 fig_stl_t = make_subplots(specs=[[{"secondary_y": True}]])
                 fig_stl_t.add_trace(go.Scatter(x=resampled.index, y=result.trend, mode='lines', line_color='#cf6b3a', name='Trend Component', line_width=3), secondary_y=False)
@@ -144,14 +155,12 @@ def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, iop_off
                 fig_stl_t.update_layout(title="STL: Trend", yaxis_title="IOP (mmHg)", yaxis2_title="OCT (μm)", hovermode="x unified", template="plotly_white", margin=dict(l=20, r=20, t=50, b=20))
                 fig_stl_t = apply_system_overlays(fig_stl_t, limit_iop)
 
-            # Sub-plot Seasonal
             if 'Seasonal' in stl_components:
                 fig_stl_s = make_subplots(specs=[[{"secondary_y": True}]])
                 fig_stl_s.add_trace(go.Scatter(x=resampled.index, y=result.seasonal, mode='lines', line_color="#22c54b", name='Seasonal Component', line_width=2), secondary_y=False)
                 fig_stl_s = add_global_overlays(fig_stl_s, df_visits, df_oct, mrw_shift, rnfl_shift, global_overlays)
                 fig_stl_s.update_layout(title="STL: Seasonal", yaxis_title="Variation (mmHg)", yaxis2_title="OCT (μm)", hovermode="x unified", template="plotly_white", margin=dict(l=20, r=20, t=50, b=20))
             
-            # Sub-plot Residuals
             if 'Residuals' in stl_components:
                 fig_stl_r = make_subplots(specs=[[{"secondary_y": True}]])
                 fig_stl_r.add_trace(go.Scatter(x=resampled.index, y=result.resid, mode='lines', line_color="#da248e", name='Residual Component', line_width=2), secondary_y=False)
@@ -162,8 +171,7 @@ def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, iop_off
             msg = go.Figure().update_layout(title=f"Not enough data points ({len(resampled)}) for an STL period of {stl_period}.", template="plotly_white")
             fig_stl_t, fig_stl_s, fig_stl_r = msg, msg, msg
 
-    # Visual Field (Untouched, just its own data)
     if 'Visual Field' in selected_plots: 
         fig_vf = build_category_fig(df_oct, ['ms_db', 'md_db', 'slv_db'], "Visual Field", "dB")
 
-    return fig_ewma, fig_stl_t, fig_stl_s, fig_stl_r, fig_vf
+    return fig_ewma, fig_boxplot, fig_stl_t, fig_stl_s, fig_stl_r, fig_vf

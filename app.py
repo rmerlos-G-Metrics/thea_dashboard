@@ -104,17 +104,17 @@ def toggle_view_2(plots, stl): return toggle_plot_containers(plots, stl)
 
 @app.callback(
     [Output('graph-ewma-1', 'figure'), Output('graph-stl-trend-1', 'figure'), Output('graph-stl-seasonal-1', 'figure'), Output('graph-stl-resid-1', 'figure'), Output('graph-vf-1', 'figure')],
-    [Input('patient-dropdown-1', 'value'), Input('alpha-slider-1', 'value'), Input('mrw-shift-slider-1', 'value'), Input('rnflt-shift-slider-1', 'value'), Input('stl-period-slider-1', 'value'), Input('plot-selector-1', 'value'), Input('stl-selector-1', 'value'), Input('overlay-selector-1', 'value'), Input('limit-iop-1', 'value')]
+    [Input('patient-dropdown-1', 'value'), Input('alpha-slider-1', 'value'), Input('mrw-shift-slider-1', 'value'), Input('rnfl-shift-slider-1', 'value'), Input('iop-offset-slider-1', 'value'), Input('stl-period-slider-1', 'value'), Input('plot-selector-1', 'value'), Input('stl-selector-1', 'value'), Input('overlay-selector-1', 'value'), Input('limit-iop-1', 'value')]
 )
-def update_figs_1(p, a, mrw_s, rnflt_s, stlp, plots, stl_c, overlays, limit): 
-    return generate_all_figures(p, a, mrw_s, rnflt_s, stlp, plots, stl_c, overlays, limit)
+def update_figs_1(p, a, mrw_s, rnfl_s, iop_offset, stlp, plots, stl_c, overlays, limit): 
+    return generate_all_figures(p, a, mrw_s, rnfl_s, iop_offset, stlp, plots, stl_c, overlays, limit)
 
 @app.callback(
     [Output('graph-ewma-2', 'figure'), Output('graph-stl-trend-2', 'figure'), Output('graph-stl-seasonal-2', 'figure'), Output('graph-stl-resid-2', 'figure'), Output('graph-vf-2', 'figure')],
-    [Input('patient-dropdown-2', 'value'), Input('alpha-slider-2', 'value'), Input('mrw-shift-slider-2', 'value'), Input('rnflt-shift-slider-2', 'value'), Input('stl-period-slider-2', 'value'), Input('plot-selector-2', 'value'), Input('stl-selector-2', 'value'), Input('overlay-selector-2', 'value'), Input('limit-iop-2', 'value')]
+    [Input('patient-dropdown-2', 'value'), Input('alpha-slider-2', 'value'), Input('mrw-shift-slider-2', 'value'), Input('rnfl-shift-slider-2', 'value'), Input('iop-offset-slider-2', 'value'), Input('stl-period-slider-2', 'value'), Input('plot-selector-2', 'value'), Input('stl-selector-2', 'value'), Input('overlay-selector-2', 'value'), Input('limit-iop-2', 'value')]
 )
-def update_figs_2(p, a, mrw_s, rnflt_s, stlp, plots, stl_c, overlays, limit): 
-    return generate_all_figures(p, a, mrw_s, rnflt_s, stlp, plots, stl_c, overlays, limit)
+def update_figs_2(p, a, mrw_s, rnfl_s, iop_offset, stlp, plots, stl_c, overlays, limit): 
+    return generate_all_figures(p, a, mrw_s, rnfl_s, iop_offset, stlp, plots, stl_c, overlays, limit)
 
 if __name__ == '__main__':
     app.run(debug=True)

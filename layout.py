@@ -7,7 +7,7 @@ AVAILABLE_GLAUCOMA_TYPES = df_patients['type_of_glaucoma'].unique().tolist()
 AVAILABLE_NPGS_TYPES = df_patients['npgs_type'].unique().tolist()
 
 AVAILABLE_PLOTS = ['EWMA IOP', 'STL Decomposition', 'Visual Field'] 
-AVAILABLE_OVERLAYS = ['GAT', 'ARGOS', 'MRW', 'RNFLT']
+AVAILABLE_OVERLAYS = ['GAT', 'ARGOS', 'MRW', 'RNFL']
 STL_COMPONENTS = ['Trend', 'Seasonal', 'Residuals']
 
 def get_login_layout():
@@ -69,18 +69,23 @@ def create_filter_panel(panel_id):
                 html.Label("Global Data Overlays (Applies to EWMA & STL):", style={'fontWeight': 'bold', 'color': '#8b5cf6'}),
                 dcc.Checklist(id=f'overlay-selector-{panel_id}', options=[{'label': f" {p}", 'value': p} for p in AVAILABLE_OVERLAYS], value=['GAT', 'ARGOS'], inline=True, style={'marginBottom': '15px', 'display': 'flex', 'gap': '15px', 'flexWrap': 'wrap'}),
 
-                html.Div(style={'display': 'flex', 'gap': '20px', 'marginTop': '10px', 'marginBottom': '15px'}, children=[
-                    html.Div(style={'flex': '1'}, children=[
-                        html.Label("Limit IOP Line (mmHg):", style={'fontWeight': 'bold', 'color': '#0369a1'}),
-                        dcc.Input(id=f'limit-iop-{panel_id}', type='number', value=21, step=1, style={'width': '80px'})
+                # Multi-slider grid
+                html.Div(style={'display': 'grid', 'gridTemplateColumns': 'repeat(2, 1fr)', 'gap': '20px', 'marginTop': '10px', 'marginBottom': '15px'}, children=[
+                    html.Div(children=[
+                        html.Label("IOP Start Offset (Days):", style={'fontWeight': 'bold', 'color': '#ef4444'}),
+                        dcc.Slider(id=f'iop-offset-slider-{panel_id}', min=0, max=365, step=5, value=0)
                     ]),
-                    html.Div(style={'flex': '1'}, children=[
+                    html.Div(children=[
+                        html.Label("Limit IOP Line (mmHg):", style={'fontWeight': 'bold', 'color': '#0369a1'}),
+                        dcc.Input(id=f'limit-iop-{panel_id}', type='number', value=21, step=1, style={'width': '100%'})
+                    ]),
+                    html.Div(children=[
                         html.Label("MRW Shift (Days):", style={'fontWeight': 'bold'}),
                         dcc.Slider(id=f'mrw-shift-slider-{panel_id}', min=-365, max=365, step=5, value=0)
                     ]),
-                    html.Div(style={'flex': '1'}, children=[
-                        html.Label("RNFLT Shift (Days):", style={'fontWeight': 'bold'}),
-                        dcc.Slider(id=f'rnflt-shift-slider-{panel_id}', min=-365, max=365, step=5, value=0)
+                    html.Div(children=[
+                        html.Label("RNFL Shift (Days):", style={'fontWeight': 'bold'}),
+                        dcc.Slider(id=f'rnfl-shift-slider-{panel_id}', min=-365, max=365, step=5, value=0)
                     ])
                 ]),
                 

@@ -26,7 +26,7 @@ def build_category_fig(df, columns, title, y_label):
     return fig
 
 def add_global_overlays(fig, df_visits, df_oct, mrw_shift, rnfl_shift, overlays):
-    """Helper to inject GAT, ARGOS, MRW, and rnfl into any plot using a secondary y-axis if needed."""
+    """Helper to inject GAT, ARGOS, MRW, and RNFL into any plot using a secondary y-axis if needed."""
     
     # 1. Primary Y-Axis Overlays (IOP based)
     if not df_visits.empty:
@@ -40,19 +40,23 @@ def add_global_overlays(fig, df_visits, df_oct, mrw_shift, rnfl_shift, overlays)
             
     # 2. Secondary Y-Axis Overlays (OCT based - µm)
     if not df_oct.empty:
-        viz_mrw = True if 'MRW' in overlays else 'legendonly'
-        if 'mrw_g' in df_oct.columns:
+        # Dynamic Fallback: Use 'mrw_g' if it exists, otherwise use 'mrw_gc'
+        mrw_col = 'mrw_g' if 'mrw_g' in df_oct.columns else 'mrw_gc' if 'mrw_gc' in df_oct.columns else None
+        if mrw_col:
+            viz_mrw = True if 'MRW' in overlays else 'legendonly'
             mrw_dates = pd.to_datetime(df_oct['date'], errors='coerce') + pd.to_timedelta(mrw_shift, unit='d')
-            fig.add_trace(go.Scatter(x=mrw_dates, y=df_oct['mrw_g'], mode='lines+markers', name=f'MRW Global (Shift: {mrw_shift}d)', marker=dict(symbol='diamond'), line=dict(color='#0ea5e9', dash='longdash'), connectgaps=True, visible=viz_mrw), secondary_y=True)
+            fig.add_trace(go.Scatter(x=mrw_dates, y=df_oct[mrw_col], mode='lines+markers', name=f'MRW {mrw_col.upper()} (Shift: {mrw_shift}d)', marker=dict(symbol='diamond'), line=dict(color='#0ea5e9', dash='longdash'), connectgaps=True, visible=viz_mrw), secondary_y=True)
 
-        viz_rnfl = True if 'rnfl' in overlays else 'legendonly'
-        if 'rnfl_g' in df_oct.columns:
+        # Dynamic Fallback: Use 'rnfl_g' if it exists, otherwise use 'rnfl_gc'
+        rnfl_col = 'rnfl_g' if 'rnfl_g' in df_oct.columns else 'rnfl_gc' if 'rnfl_gc' in df_oct.columns else None
+        if rnfl_col:
+            viz_rnfl = True if 'RNFL' in overlays else 'legendonly'
             rnfl_dates = pd.to_datetime(df_oct['date'], errors='coerce') + pd.to_timedelta(rnfl_shift, unit='d')
-            fig.add_trace(go.Scatter(x=rnfl_dates, y=df_oct['rnfl_g'], mode='lines+markers', name=f'rnfl Global (Shift: {rnfl_shift}d)', marker=dict(symbol='triangle-up'), line=dict(color='#ec4899', dash='longdash'), connectgaps=True, visible=viz_rnfl), secondary_y=True)
+            fig.add_trace(go.Scatter(x=rnfl_dates, y=df_oct[rnfl_col], mode='lines+markers', name=f'RNFL {rnfl_col.upper()} (Shift: {rnfl_shift}d)', marker=dict(symbol='triangle-up'), line=dict(color='#ec4899', dash='longdash'), connectgaps=True, visible=viz_rnfl), secondary_y=True)
             
     return fig
 
-def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, stl_period, selected_plots, stl_components, global_overlays, limit_iop):
+def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, iop_offset, stl_period, selected_plots, stl_components, global_overlays, limit_iop):
     empty_fig = go.Figure().update_layout(template="plotly_white", title="Select a patient to view data")
     
     if not selected_patient or not selected_plots:
@@ -62,6 +66,7 @@ def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, stl_per
     alpha = alpha if alpha is not None else 0.3
     mrw_shift = mrw_shift if mrw_shift is not None else 0
     rnfl_shift = rnfl_shift if rnfl_shift is not None else 0
+    iop_offset = iop_offset if iop_offset is not None else 0
     stl_period = stl_period if stl_period is not None else 24
     if not global_overlays: global_overlays = []
     if not stl_components: stl_components = []
@@ -78,21 +83,32 @@ def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, stl_per
                 df_visits[col] = pd.to_numeric(df_visits[col], errors='coerce')
         df_visits = df_visits.sort_values('date')
 
+    # Convert potentially available OCT columns
     if not df_oct.empty:
-        for col in ['mrw_g', 'rnfl_g']:
-            if df_oct[col].dtype == 'object': df_oct[col] = df_oct[col].astype(str).str.replace(',', '.')
-            df_oct[col] = pd.to_numeric(df_oct[col], errors='coerce')
+        for col in ['mrw_g', 'mrw_gc', 'rnfl_g', 'rnfl_gc']:
+            if col in df_oct.columns:
+                if df_oct[col].dtype == 'object': df_oct[col] = df_oct[col].astype(str).str.replace(',', '.')
+                df_oct[col] = pd.to_numeric(df_oct[col], errors='coerce')
 
     resampled = pd.Series(dtype=float)
     if not df_eye.empty:
         df_eye['time_of_measurement'] = pd.to_datetime(df_eye['time_of_measurement'], errors='coerce')
         df_eye['eye_pressure'] = pd.to_numeric(df_eye['eye_pressure'], errors='coerce')
         df_eye = df_eye.dropna().sort_values('time_of_measurement')
-        df_eye['ewma'] = df_eye['eye_pressure'].ewm(alpha=alpha, adjust=False).mean()
         
-        pdf = df_eye.copy()
-        pdf.set_index('time_of_measurement', inplace=True)
-        resampled = pdf['eye_pressure'].resample('1h').mean().interpolate(method='linear')
+        # --- NEW: Apply Time Offset specifically to IOP data ---
+        if iop_offset > 0:
+            first_measurement_date = df_eye['time_of_measurement'].min()
+            start_date = first_measurement_date + pd.to_timedelta(iop_offset, unit='d')
+            df_eye = df_eye[df_eye['time_of_measurement'] >= start_date]
+
+        # Recalculate EWMA and STL on the newly filtered timeframe
+        if not df_eye.empty:
+            df_eye['ewma'] = df_eye['eye_pressure'].ewm(alpha=alpha, adjust=False).mean()
+            
+            pdf = df_eye.copy()
+            pdf.set_index('time_of_measurement', inplace=True)
+            resampled = pdf['eye_pressure'].resample('1h').mean().interpolate(method='linear')
 
     # Initialize all figures as empty
     fig_ewma, fig_stl_t, fig_stl_s, fig_stl_r, fig_vf = empty_fig, empty_fig, empty_fig, empty_fig, empty_fig
@@ -108,7 +124,7 @@ def generate_all_figures(selected_patient, alpha, mrw_shift, rnfl_shift, stl_per
         fig_ewma = add_global_overlays(fig_ewma, df_visits, df_oct, mrw_shift, rnfl_shift, global_overlays)
         
         fig_ewma.update_layout(
-            title="IOP EWMA Integrated View", 
+            title=f"IOP EWMA Integrated View (Offset: {iop_offset} days)", 
             yaxis_title="Intraocular Pressure (mmHg)", 
             yaxis2_title="OCT Thickness (μm)",
             hovermode="x unified", template="plotly_white", margin=dict(l=20, r=20, t=50, b=20)
